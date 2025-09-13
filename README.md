@@ -16,3 +16,7 @@
     - app/student/actions.ts 使用 Server Actions 执行业务写操作，并在服务端做 session/role 二次校验。
   - 安全设计：
     - /types 将强化 Session/User/JWT ，使用字面量联合类型 (STUDENT|TEACHER)
+  - 数据表设计:
+    - user表：主要字段 emai password role，保存用户信息与权限
+    - course表：主要字段 tile，保持课程信息
+    - enrollments 选课表，主要字段 student_id teacher_id course_id，user与course课程表多对多，映射学生，老师与课程的关系
