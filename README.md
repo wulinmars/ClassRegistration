@@ -1,36 +1,18 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 实现思路与架构设计
 
-## Getting Started
+本项目基于Next.js App Router + Typescript + Prisma + PostgreSQL + NextAuth 构建，将实现”学生选课，老师查看与管理“的最小可行MVP
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 架构设计
+  - 路由与页面：
+    - /(auth)/login: 登录页
+    - /student: 学生页面（课程列表、注册/退课）
+    - /teacher: 老师页面（管理学生，筛选学生列表，比如订阅少于 3 门课程的学生）
+  - 认证与授权
+    - lib/auth.ts 配置 NextAuth 的 Credentials 登录并校验密码
+    - 使用 JWT 回调将用户 id/role 注入 token；Session 回调将 id/role 注入session.user
+    - middleware.ts 将基于橘色守卫路径：/student 仅 STUDENT访问, /teacher 仅 TEACHER 访问
+  - 数据访问：
+    - lib/db.ts 将提供 PrismaClient 访问单例
+    - app/student/actions.ts 使用 Server Actions 执行业务写操作，并在服务端做 session/role 二次校验。
+  - 安全设计：
+    - /types 将强化 Session/User/JWT ，使用字面量联合类型 (STUDENT|TEACHER)
