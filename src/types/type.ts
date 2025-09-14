@@ -37,6 +37,32 @@ export interface Enrollment {
   course?: Course
 }
 
+export interface Student {
+  id: string
+  name: string
+  email: string
+  role: Role
+  createdAt: Date
+  updatedAt: Date
+  enrollments?: Enrollment[]
+  _count?: {
+    enrollments: number
+  }
+}
+
+export interface Teacher {
+  id: string
+  name: string
+  email: string
+  role: Role
+  createdAt: Date
+  updatedAt: Date
+  coursesAsTeacher?: Course[]
+  _count?: {
+    coursesAsTeacher: number
+  }
+}
+
 declare module 'next-auth' {
   interface Session {
     user: {
