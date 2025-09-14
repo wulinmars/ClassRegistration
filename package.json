@@ -9,7 +9,6 @@
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
     "db:init": "node scripts/init-db.js"
   },
   "dependencies": {
@@ -42,8 +41,5 @@
     "tsx": "^4.20.5",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }
