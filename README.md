@@ -2,15 +2,68 @@
 
 一个基于现代技术栈构建的学校选课管理系统，支持学生选课和教师管理功能。
 
-## 🚀 技术栈
+## 快速开始
 
-- **前端框架**: Next.js 14 (App Router)
-- **开发语言**: TypeScript
-- **数据库**: PostgreSQL
-- **ORM**: Prisma
-- **认证**: NextAuth.js
-- **样式**: Tailwind CSS
-- **包管理**: pnpm
+- 前置要求
+  - Node.js 18+
+  - pnpm 或 npm
+  - Docker (用于本地 PostgreSQL)
+
+- 一键启动
+  1. 复制环境配置
+     - cp .env.example .env 或确保 .env 已包含以下字段：
+       - DATABASE_URL=postgresql://postgres:password@localhost:5432/class_registration?schema=public
+       - NEXTAUTH_SECRET=请替换为随机安全值
+       - NEXTAUTH_URL=http://localhost:3000
+  2. 启动数据库
+     - docker compose up -d
+  3. 安装依赖并启动应用
+     - pnpm install
+     - pnpm dev
+  4. 打开浏览器
+     - http://localhost:3000
+
+- 首次启动会自动执行 Prisma 迁移并写入初始化数据（通过 migration 完成）。
+- 演示账户
+  - 学生: student@example.com / password123
+  - 教师: teacher@example.com / password123
+
+## 常用命令
+
+- 数据库
+  - 生成 Prisma Client: pnpm run db:generate
+  - 推送 schema 到数据库（开发用）: pnpm run db:push
+  - 应用迁移（生产/本地一致）: npx prisma migrate deploy
+  - 打开 Prisma Studio: npx prisma studio
+
+- 应用
+  - 开发启动: pnpm dev
+  - 生产构建: pnpm build
+  - 生产启动: pnpm start
+
+## 环境变量
+
+- DATABASE_URL：PostgreSQL 连接串
+- NEXTAUTH_SECRET：用于签名 JWT 的密钥
+- NEXTAUTH_URL：应用外部访问地址
+
+## Docker 数据库
+
+- 本项目提供 docker-compose.yml，可一键启动 PostgreSQL 15
+- 默认账号密码在 docker-compose.yml 中可见，务必仅用于本地开发
+
+## 目录结构
+
+```
+/                    # 根目录
+├─ prisma/           # Prisma schema 与 migrations
+├─ scripts/          # 初始化脚本（首次启动自动执行迁移）
+├─ src/              # 源码目录
+│  ├─ app/           # Next.js App Router 页面与 API 路由
+│  ├─ lib/           # 数据库、认证等工具
+│  └─ types/         # 类型定义
+└─ public/           # 静态资源
+```
 
 ## 📋 功能特性
 
@@ -82,13 +135,4 @@ Enrollment {
 - **服务端验证**: Server Actions中进行二次权限校验
 - **密码加密**: 使用bcrypt进行密码哈希
 - **会话管理**: 安全的JWT和Session处理
-- **路由保护**: 中间件级别的访问控制、
-
-## 📝 待办事项
-
-- [ ] 实现课程容量限制
-- [ ] 添加课程时间冲突检测
-- [ ] 实现选课时间窗口控制
-- [ ] 添加邮件通知功能
-- [ ] 实现数据导出功能
-- [ ] 添加课程评价系统
+- **路由保护**: 中间件级别的访问控制
