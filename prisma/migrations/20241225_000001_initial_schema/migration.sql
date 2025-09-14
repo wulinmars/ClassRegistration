@@ -1,58 +1,54 @@
--- CreateEnum
-CREATE TYPE "Role" AS ENUM ('STUDENT', 'TEACHER');
+-- Initial schema aligned with current Prisma models and codebase
 
--- CreateEnum
+-- Enums
+CREATE TYPE "Role" AS ENUM ('STUDENT', 'TEACHER');
 CREATE TYPE "EnrollmentStatus" AS ENUM ('ACTIVE', 'DROPPED');
 
--- CreateTable
-CREATE TABLE "User" (
-    "id" SERIAL NOT NULL,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "role" "Role" NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+-- Users table (maps to model User with @@map("users"))
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  name TEXT NOT NULL,
+  phone TEXT,
+  role "Role" NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- CreateTable
-CREATE TABLE "Course" (
-    "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "credits" INTEGER NOT NULL,
-    "teacherId" INTEGER NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
+-- Courses table (maps to model Course with @@map("courses"))
+CREATE TABLE courses (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  "teacherId" TEXT NOT NULL,
+  "maxStudents" INTEGER NOT NULL DEFAULT 50,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- CreateTable
-CREATE TABLE "Enrollment" (
-    "id" SERIAL NOT NULL,
-    "studentId" INTEGER NOT NULL,
-    "courseId" INTEGER NOT NULL,
-    "status" "EnrollmentStatus" NOT NULL DEFAULT 'ACTIVE',
-    "enrolledAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Enrollment_pkey" PRIMARY KEY ("id")
+-- Enrollments table (maps to model Enrollment with @@map("enrollments"))
+CREATE TABLE enrollments (
+  id TEXT PRIMARY KEY,
+  "studentId" TEXT NOT NULL,
+  "courseId" TEXT NOT NULL,
+  status "EnrollmentStatus" NOT NULL DEFAULT 'ACTIVE',
+  "enrolledAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+-- Relations
+ALTER TABLE courses
+  ADD CONSTRAINT courses_teacher_fkey
+  FOREIGN KEY ("teacherId") REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE;
 
--- CreateIndex
-CREATE UNIQUE INDEX "Enrollment_studentId_courseId_key" ON "Enrollment"("studentId", "courseId");
+ALTER TABLE enrollments
+  ADD CONSTRAINT enrollments_student_fkey
+  FOREIGN KEY ("studentId") REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "Course" ADD CONSTRAINT "Course_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE enrollments
+  ADD CONSTRAINT enrollments_course_fkey
+  FOREIGN KEY ("courseId") REFERENCES courses(id) ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "Enrollment" ADD CONSTRAINT "Enrollment_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Enrollment" ADD CONSTRAINT "Enrollment_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- Indexes and constraints
+CREATE UNIQUE INDEX enrollments_student_course_unique
+  ON enrollments("studentId", "courseId");
