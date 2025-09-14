@@ -4,8 +4,11 @@ import bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 
 async function main() {
+  console.log('Starting database seeding...')
+  
   // Create test users
   const hashedPassword = await bcrypt.hash('password123', 10)
+  console.log('Password hashed successfully')
 
   const student = await prisma.user.upsert({
     where: { email: 'student@example.com' },

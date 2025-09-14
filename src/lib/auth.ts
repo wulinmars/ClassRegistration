@@ -1,23 +1,7 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-
-// Demo users for testing (in production, use database)
-const demoUsers = [
-  {
-    id: '1',
-    email: 'student@example.com',
-    password: 'password123',
-    name: 'Test Student',
-    role: 'STUDENT' as const
-  },
-  {
-    id: '2',
-    email: 'teacher@example.com',
-    password: 'password123',
-    name: 'Test Teacher',
-    role: 'TEACHER' as const
-  }
-]
+import { prisma } from './db'
+import bcrypt from 'bcrypt'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -32,19 +16,37 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const user = demoUsers.find(
-          u => u.email === credentials.email && u.password === credentials.password
-        )
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            select: {
+              id: true,
+              email: true,
+              password: true,
+              name: true,
+              role: true
+            }
+          })
 
-        if (!user) {
+          if (!user) {
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+          
+          if (!isPasswordValid) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          }
+        } catch (error) {
+          console.error('Authentication error:', error)
           return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role
         }
       }
     })

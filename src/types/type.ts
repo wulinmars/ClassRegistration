@@ -10,8 +10,8 @@ export interface Course {
   description?: string
   teacherId: string
   maxStudents: number
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
   teacher: {
     id: string
     name: string
@@ -28,7 +28,7 @@ export interface Enrollment {
   studentId: string
   courseId: string
   status: EnrollmentStatus
-  enrolledAt: Date
+  enrolledAt: string
   student?: {
     id: string
     name: string
@@ -42,8 +42,8 @@ export interface Student {
   name: string
   email: string
   role: Role
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
   enrollments?: Enrollment[]
   _count?: {
     enrollments: number
@@ -55,8 +55,8 @@ export interface Teacher {
   name: string
   email: string
   role: Role
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
   coursesAsTeacher?: Course[]
   _count?: {
     coursesAsTeacher: number

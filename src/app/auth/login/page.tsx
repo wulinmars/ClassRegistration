@@ -8,8 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters')
+  email: z.string().email('请输入有效的邮箱地址'),
+  password: z.string().min(6, '密码至少需要6个字符')
 })
 
 type LoginForm = z.infer<typeof loginSchema>
@@ -39,7 +39,7 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError('Invalid email or password')
+        setError('邮箱或密码错误')
       } else {
         // Get session to determine user role
         const session = await getSession()
@@ -50,7 +50,7 @@ export default function LoginPage() {
         }
       }
     } catch (error) {
-      setError('An error occurred. Please try again.')
+      setError('发生错误，请重试')
     } finally {
       setIsLoading(false)
     }
@@ -61,24 +61,24 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+            登录您的账户
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            School Class Registration System
+            学校选课系统
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">
-                Email address
+                邮箱地址
               </label>
               <input
                 {...register('email')}
                 type="email"
                 autoComplete="email"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                placeholder="邮箱地址"
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -86,14 +86,14 @@ export default function LoginPage() {
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
-                Password
+                密码
               </label>
               <input
                 {...register('password')}
                 type="password"
                 autoComplete="current-password"
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                placeholder="密码"
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
@@ -113,7 +113,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? '登录中...' : '登录'}
             </button>
           </div>
 
@@ -123,12 +123,12 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">Demo Accounts</span>
+                <span className="px-2 bg-gray-50 text-gray-500">演示账户</span>
               </div>
             </div>
             <div className="mt-4 text-sm text-gray-600">
-              <p><strong>Student:</strong> student@example.com / password123</p>
-              <p><strong>Teacher:</strong> teacher@example.com / password123</p>
+              <p><strong>学生:</strong> student@example.com / password123</p>
+              <p><strong>教师:</strong> teacher@example.com / password123</p>
             </div>
           </div>
         </form>
