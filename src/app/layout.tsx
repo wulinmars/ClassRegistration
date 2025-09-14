@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "School Class Registration System",
-  description: "A modern class registration system for schools",
+  title: "学校选课系统",
+  description: "现代化的学校选课管理系统",
 };
 
 export default function RootLayout({
