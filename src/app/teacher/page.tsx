@@ -3,165 +3,121 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Course, Student, Enrollment } from '@/types/type'
+import { Course, Enrollment, Student } from '@/types/type'
+import { courseApi, enrollmentApi, userApi, handleApiError } from '@/lib/api'
 
-// 模拟数据 - 课程列表
-const mockCourses: Course[] = [
-  {
-    id: '1',
-    title: '高等数学',
-    description: '微积分、线性代数等数学基础课程',
-    teacherId: 'teacher1',
-    maxStudents: 50,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    teacher: {
-      id: 'teacher1',
-      name: '张教授',
-      email: 'zhang@example.com'
-    },
-    _count: {
-      enrollments: 25
-    }
-  },
-  {
-    id: '2',
-    title: '计算机程序设计',
-    description: 'Python编程基础与实践',
-    teacherId: 'teacher1',
-    maxStudents: 40,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    teacher: {
-      id: 'teacher1',
-      name: '张教授',
-      email: 'zhang@example.com'
-    },
-    _count: {
-      enrollments: 30
-    }
-  }
-]
 
-// 模拟数据 - 学生列表
-const mockStudents: Student[] = [
-  {
-    id: 'student1',
-    name: '李小明',
-    email: 'lixiaoming@example.com',
-    role: 'STUDENT',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    _count: {
-      enrollments: 2
-    }
-  },
-  {
-    id: 'student2',
-    name: '王小红',
-    email: 'wangxiaohong@example.com',
-    role: 'STUDENT',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    _count: {
-      enrollments: 1
-    }
-  },
-  {
-    id: 'student3',
-    name: '张小华',
-    email: 'zhangxiaohua@example.com',
-    role: 'STUDENT',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    _count: {
-      enrollments: 4
-    }
-  },
-  {
-    id: 'student4',
-    name: '刘小强',
-    email: 'liuxiaoqiang@example.com',
-    role: 'STUDENT',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    _count: {
-      enrollments: 0
-    }
-  }
-]
 
 function TeacherManagement({ teacherId }: { teacherId: string }) {
   const [activeTab, setActiveTab] = useState<'courses' | 'students'>('courses')
-  const [courses, setCourses] = useState<Course[]>(mockCourses)
-  const [students, setStudents] = useState<Student[]>(mockStudents)
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>(mockStudents)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [students, setStudents] = useState<Student[]>([])
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [enrollmentFilter, setEnrollmentFilter] = useState<'all' | 'less_than_3' | 'no_courses'>('all')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
-  // 课程管理相关状态
+
   const [showAddCourse, setShowAddCourse] = useState(false)
   const [newCourse, setNewCourse] = useState({ title: '', description: '', maxStudents: 50 })
-  
-  // 学生管理相关状态
+
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [newStudent, setNewStudent] = useState({ name: '', email: '' })
 
-  // 课程管理函数
-  const handleAddCourse = () => {
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const [coursesResponse, studentsResponse] = await Promise.all([
+           courseApi.getCourses(teacherId),
+           userApi.getUsers('STUDENT')
+         ])
+         
+         setCourses(coursesResponse.courses)
+          setStudents(studentsResponse.users)
+         setFilteredStudents(studentsResponse.users)
+      } catch (err) {
+        console.error('Failed to load data:', err)
+        setError('加载数据失败，请刷新页面重试')
+        setCourses([])
+        setStudents([])
+        setFilteredStudents([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [teacherId])
+
+
+  const handleAddCourse = async () => {
     if (newCourse.title.trim()) {
-      const course: Course = {
-        id: `course_${Date.now()}`,
-        title: newCourse.title,
-        description: newCourse.description,
-        teacherId,
-        maxStudents: newCourse.maxStudents,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        teacher: {
-          id: teacherId,
-          name: '当前教师',
-          email: 'teacher@example.com'
-        },
-        _count: {
-          enrollments: 0
-        }
+      try {
+         const courseData = {
+           title: newCourse.title,
+           description: newCourse.description,
+           teacherId,
+           maxStudents: newCourse.maxStudents
+         }
+         
+         const response = await courseApi.createCourse(courseData)
+         setCourses(prev => [...prev, response.course])
+        setNewCourse({ title: '', description: '', maxStudents: 50 })
+        setShowAddCourse(false)
+      } catch (err) {
+        console.error('Failed to create course:', err)
+        handleApiError(err)
       }
-      setCourses(prev => [...prev, course])
-      setNewCourse({ title: '', description: '', maxStudents: 50 })
-      setShowAddCourse(false)
     }
   }
 
-  const handleDeleteCourse = (courseId: string) => {
-    setCourses(prev => prev.filter(c => c.id !== courseId))
+  const handleDeleteCourse = async (courseId: string) => {
+    try {
+      await courseApi.deleteCourse(courseId)
+      setCourses(prev => prev.filter(c => c.id !== courseId))
+    } catch (err) {
+      console.error('Failed to delete course:', err)
+      handleApiError(err)
+    }
   }
 
-  // 学生管理函数
-  const handleAddStudent = () => {
+
+  const handleAddStudent = async () => {
     if (newStudent.name.trim() && newStudent.email.trim()) {
-      const student: Student = {
-        id: `student_${Date.now()}`,
-        name: newStudent.name,
-        email: newStudent.email,
-        role: 'STUDENT',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        _count: {
-          enrollments: 0
-        }
+      try {
+         const studentData = {
+           name: newStudent.name,
+           email: newStudent.email,
+           password: 'defaultPassword123'
+         }
+         
+         const response = await userApi.createStudent(studentData)
+          setStudents(prev => [...prev, response.user])
+        setNewStudent({ name: '', email: '' })
+        setShowAddStudent(false)
+      } catch (err) {
+        console.error('Failed to create student:', err)
+        handleApiError(err)
       }
-      setStudents(prev => [...prev, student])
-      setNewStudent({ name: '', email: '' })
-      setShowAddStudent(false)
     }
   }
 
-  const handleDeleteStudent = (studentId: string) => {
-    setStudents(prev => prev.filter(s => s.id !== studentId))
+  const handleDeleteStudent = async (studentId: string) => {
+    try {
+      await userApi.deleteUser(studentId)
+      setStudents(prev => prev.filter(s => s.id !== studentId))
+    } catch (err) {
+      console.error('Failed to delete student:', err)
+      handleApiError(err)
+    }
   }
 
-  // 学生筛选和搜索
+
   useEffect(() => {
     let filtered = students
     
@@ -183,9 +139,29 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
     setFilteredStudents(filtered)
   }, [students, searchQuery, enrollmentFilter])
 
+  if (loading) {
+    return (
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-lg text-gray-600">加载中...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-lg text-red-600">{error}</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white shadow rounded-lg">
-      {/* 标签页导航 */}
+
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex">
           <button
@@ -211,7 +187,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
         </nav>
       </div>
 
-      {/* 课程管理内容 */}
+
       {activeTab === 'courses' && (
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -224,7 +200,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
             </button>
           </div>
 
-          {/* 添加课程表单 */}
+
           {showAddCourse && (
             <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
               <h3 className="text-md font-medium text-gray-900 mb-4">添加新课程</h3>
@@ -277,7 +253,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
             </div>
           )}
 
-          {/* 课程列表 */}
+
           <div className="grid gap-4">
             {courses.map((course) => (
               <div key={course.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -287,7 +263,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
                     <p className="text-gray-600 mt-1">{course.description}</p>
                     <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                       <span>已选人数: {course._count?.enrollments || 0}/{course.maxStudents}</span>
-                      <span>创建时间: {course.createdAt.toLocaleDateString()}</span>
+                      <span>创建时间: {new Date(course.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="ml-4">
@@ -310,7 +286,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
         </div>
       )}
 
-      {/* 学生管理内容 */}
+
       {activeTab === 'students' && (
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -323,7 +299,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
             </button>
           </div>
 
-          {/* 搜索和筛选 */}
+
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">搜索学生</label>
@@ -352,7 +328,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
             </div>
           </div>
 
-          {/* 添加学生表单 */}
+
           {showAddStudent && (
             <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
               <h3 className="text-md font-medium text-gray-900 mb-4">添加新学生</h3>
@@ -395,7 +371,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
             </div>
           )}
 
-          {/* 学生列表 */}
+
           <div className="grid gap-4">
             {filteredStudents.map((student) => (
               <div key={student.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -405,7 +381,7 @@ function TeacherManagement({ teacherId }: { teacherId: string }) {
                     <p className="text-gray-600 mt-1">{student.email}</p>
                     <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                       <span>已选课程: {student._count?.enrollments || 0} 门</span>
-                      <span>注册时间: {student.createdAt.toLocaleDateString()}</span>
+                      <span>注册时间: {new Date(student.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="ml-4">
@@ -438,7 +414,7 @@ export default function TeacherPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (status === 'loading') return // Still loading
+    if (status === 'loading') return
     if (!session) {
       router.push('/auth/login')
       return
@@ -452,7 +428,7 @@ export default function TeacherPage() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">加载中...</div>
       </div>
     )
   }
@@ -468,18 +444,18 @@ export default function TeacherPage() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">
-                Teacher Dashboard
+                教师管理系统
               </h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700">
-                Welcome, {session.user.name}!
+                欢迎，{session.user.name}！
               </span>
               <button
                 onClick={() => signOut()}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                Sign Out
+                退出登录
               </button>
             </div>
           </div>

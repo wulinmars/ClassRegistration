@@ -4,95 +4,63 @@ import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Course, Enrollment } from '@/types/type'
+import { courseApi, enrollmentApi, handleApiError } from '@/lib/api'
 
-// 模拟数据 - 可选课程
-const mockAvailableCourses: Course[] = [
-  {
-    id: '1',
-    title: '高等数学',
-    description: '微积分、线性代数等数学基础课程',
-    teacherId: 'teacher1',
-    maxStudents: 50,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    teacher: {
-      id: 'teacher1',
-      name: '张教授',
-      email: 'zhang@example.com'
-    },
-    _count: {
-      enrollments: 25
-    }
-  },
-  {
-    id: '2',
-    title: '计算机程序设计',
-    description: 'Python编程基础与实践',
-    teacherId: 'teacher2',
-    maxStudents: 40,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    teacher: {
-      id: 'teacher2',
-      name: '李老师',
-      email: 'li@example.com'
-    },
-    _count: {
-      enrollments: 30
-    }
-  },
-  {
-    id: '3',
-    title: '数据结构与算法',
-    description: '计算机科学核心课程，学习各种数据结构和算法',
-    teacherId: 'teacher3',
-    maxStudents: 35,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-    teacher: {
-      id: 'teacher3',
-      name: '王教授',
-      email: 'wang@example.com'
-    },
-    _count: {
-      enrollments: 20
-    }
-  }
-]
 
-// 模拟数据 - 已选课程
-const mockEnrolledCourses: Enrollment[] = [
-  {
-    id: 'enrollment1',
-    studentId: 'student1',
-    courseId: '1',
-    status: 'ACTIVE',
-    enrolledAt: new Date('2024-01-15'),
-    course: mockAvailableCourses[0]
-  }
-]
 
 function CourseManagement({ studentId }: { studentId: string }) {
   const [activeTab, setActiveTab] = useState<'available' | 'enrolled'>('available')
-  const [enrolledCourses, setEnrolledCourses] = useState<Enrollment[]>(mockEnrolledCourses)
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([])
+  const [enrolledCourses, setEnrolledCourses] = useState<Enrollment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleEnrollCourse = (courseId: string) => {
-    const course = mockAvailableCourses.find(c => c.id === courseId)
-    if (course) {
-      const newEnrollment: Enrollment = {
-        id: `enrollment_${Date.now()}`,
-        studentId,
-        courseId,
-        status: 'ACTIVE',
-        enrolledAt: new Date(),
-        course
-      }
-      setEnrolledCourses(prev => [...prev, newEnrollment])
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const [coursesResponse, enrollmentsResponse] = await Promise.all([
+        courseApi.getCourses(),
+        enrollmentApi.getEnrollments({ studentId, status: 'ACTIVE' })
+      ])
+      
+      const allCourses = coursesResponse.courses
+      const studentEnrollments = enrollmentsResponse.enrollments
+      
+      const enrolledCourseIds = new Set(studentEnrollments.map(e => e.course.id))
+      const available = allCourses.filter(course => !enrolledCourseIds.has(course.id))
+      const enrolled = studentEnrollments
+      
+      setAvailableCourses(available)
+      setEnrolledCourses(enrolled)
+    } catch (err) {
+      setError(handleApiError(err))
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDropCourse = (enrollmentId: string) => {
-    setEnrolledCourses(prev => prev.filter(e => e.id !== enrollmentId))
+  useEffect(() => {
+    loadData()
+  }, [studentId])
+
+  const handleEnrollCourse = async (courseId: string) => {
+    try {
+      await enrollmentApi.createEnrollment({ studentId, courseId })
+      await loadData()
+    } catch (err) {
+      setError(handleApiError(err))
+    }
+  }
+
+  const handleDropCourse = async (enrollmentId: string) => {
+    try {
+      await enrollmentApi.updateEnrollment(enrollmentId, { status: 'DROPPED' })
+      await loadData()
+    } catch (err) {
+      setError(handleApiError(err))
+    }
   }
 
   const isEnrolled = (courseId: string) => {
@@ -101,7 +69,7 @@ function CourseManagement({ studentId }: { studentId: string }) {
 
   return (
     <div className="bg-white shadow rounded-lg">
-      {/* 标签页导航 */}
+
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex">
           <button
@@ -127,82 +95,101 @@ function CourseManagement({ studentId }: { studentId: string }) {
         </nav>
       </div>
 
-      {/* 课程内容 */}
+
       <div className="p-6">
-        {activeTab === 'available' && (
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+        
+        {loading && (
+          <div className="flex justify-center py-8">
+            <div className="text-lg">加载中...</div>
+          </div>
+        )}
+        {!loading && activeTab === 'available' && (
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">可选课程列表</h2>
             <div className="grid gap-4">
-              {mockAvailableCourses.map((course) => (
-                <div key={course.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900">{course.title}</h3>
-                      <p className="text-gray-600 mt-1">{course.description}</p>
-                      <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                        <span>授课教师: {course.teacher.name}</span>
-                        <span>已选人数: {course._count?.enrollments || 0}/{course.maxStudents}</span>
+              {availableCourses.length > 0 ? (
+                availableCourses.map((course) => (
+                  <div key={course.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-medium text-gray-900">{course.title}</h3>
+                        <p className="text-gray-600 mt-1">{course.description}</p>
+                        <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                          <span>授课教师: {course.teacher.name}</span>
+                          <span>已选人数: {course._count?.enrollments || 0}/{course.maxStudents}</span>
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        {isEnrolled(course.id) ? (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            已选课
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleEnrollCourse(course.id)}
+                            disabled={(course._count?.enrollments || 0) >= course.maxStudents}
+                            className={`px-4 py-2 rounded-md text-sm font-medium ${
+                               (course._count?.enrollments || 0) >= course.maxStudents
+                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                 : 'bg-blue-600 text-white hover:bg-blue-700'
+                             }`}
+                          >
+                            {(course._count?.enrollments || 0) >= course.maxStudents ? '已满' : '选课'}
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <div className="ml-4">
-                      {isEnrolled(course.id) ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                          已选课
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleEnrollCourse(course.id)}
-                          disabled={(course._count?.enrollments || 0) >= course.maxStudents}
-                          className={`px-4 py-2 rounded-md text-sm font-medium ${
-                             (course._count?.enrollments || 0) >= course.maxStudents
-                               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                               : 'bg-blue-600 text-white hover:bg-blue-700'
-                           }`}
-                        >
-                          {(course._count?.enrollments || 0) >= course.maxStudents ? '已满' : '选课'}
-                        </button>
-                      )}
-                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">暂无可选课程</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
 
-        {activeTab === 'enrolled' && (
+        {!loading && activeTab === 'enrolled' && (
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">已选课程列表</h2>
-            {enrolledCourses.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">您还没有选择任何课程</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {enrolledCourses.map((enrollment) => (
+            <div className="grid gap-4">
+              {enrolledCourses.length > 0 ? (
+                enrolledCourses.map((enrollment) => (
                   <div key={enrollment.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="text-lg font-medium text-gray-900">{enrollment.course?.title}</h3>
-                        <p className="text-gray-600 mt-1">{enrollment.course?.description}</p>
-                        <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                          <span>授课教师: {enrollment.course?.teacher.name}</span>
-                          <span>选课时间: {enrollment.enrolledAt.toLocaleDateString()}</span>
-                        </div>
+                         <h3 className="text-lg font-medium text-gray-900">{enrollment.course?.title}</h3>
+                         <p className="text-gray-600 mt-1">{enrollment.course?.description}</p>
+                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                           <span>教师: {enrollment.course?.teacher.name}</span>
+                           <span>容量: {enrollment.course?.maxStudents}</span>
+                           <span>已选: {enrollment.course?._count?.enrollments || 0}</span>
+                         </div>
+                        <p className="text-sm text-green-600 mt-2">
+                          选课时间: {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <div className="ml-4">
-                        <button
-                          onClick={() => handleDropCourse(enrollment.id)}
-                          className="px-4 py-2 rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700"
-                        >
-                          退课
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleDropCourse(enrollment.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        退课
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">暂无已选课程</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -215,7 +202,7 @@ export default function StudentPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (status === 'loading') return // Still loading
+    if (status === 'loading') return
     if (!session) {
       router.push('/auth/login')
       return
@@ -229,7 +216,7 @@ export default function StudentPage() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">加载中...</div>
       </div>
     )
   }
@@ -245,18 +232,18 @@ export default function StudentPage() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">
-                Student Dashboard
+                学生选课系统
               </h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700">
-                Welcome, {session.user.name}!
+                欢迎，{session.user.name}！
               </span>
               <button
                 onClick={() => signOut()}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                Sign Out
+                退出登录
               </button>
             </div>
           </div>
