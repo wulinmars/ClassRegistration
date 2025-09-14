@@ -25,6 +25,7 @@ model User {
   email     String   @unique
   password  String
   name      String
+  phone     String?  // New field added
   role      Role
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
